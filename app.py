@@ -8,17 +8,54 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from datetime import datetime
 from io import BytesIO
 
-st.title("Factuur Generator")
+st.title("Factuur Generator - Classic Suzuki Parts NL")
 
-# Inputs
-leveranciersnummer = st.text_input("Supplier Number (e.g., 1322 or 277)", "1322")
+# Step 1: Upload and Combine XLSX Files
+st.header("Step 1: Upload and Combine XLSX Files")
+leveranciersgroep = st.selectbox("Select Supplier Group", ["1322", "277"])
+
+uploaded_files = st.file_uploader("Upload XLSX Files for Combination", type="xlsx", accept_multiple_files=True)
+
+combined_df = None
+if uploaded_files and st.button("Combine Files"):
+    all_dataframes = []
+    for file in uploaded_files:
+        try:
+            df = pd.read_excel(file, header=None, usecols=[0, 1, 2, 3])
+            df = df.dropna(how='all')
+            all_dataframes.append(df)
+        except Exception as e:
+            st.error(f"Error processing {file.name}: {str(e)}")
+    
+    if all_dataframes:
+        combined_df = pd.concat(all_dataframes, ignore_index=True)
+        # Sort by product number (column 0) from small to large
+        combined_df = combined_df.sort_values(by=0)
+        st.success("Files combined successfully!")
+        st.session_state['combined_df'] = combined_df
+    else:
+        st.error("No files processed.")
+
+# Step 2: Edit Combined List (Remove unavailable items)
+st.header("Step 2: Edit Combined List")
+if 'combined_df' in st.session_state:
+    df = st.session_state['combined_df']
+    df.columns = ["Part Number", "Description", "Quantity", "Price"]
+    edited_df = st.data_editor(df, num_rows="dynamic")
+    if st.button("Save Edited List"):
+        st.session_state['edited_df'] = edited_df
+        st.success("List saved for invoice generation!")
+else:
+    st.info("Combine files first.")
+
+# Step 3: Generate Invoice
+st.header("Step 3: Generate Invoice")
+leveranciersnummer = st.text_input("Supplier Number", leveranciersgroep)
 factuurnummer = st.text_input("Invoice Number", "INV-000")
 shipping = st.number_input("Shipping & Handling (EUR)", min_value=0.0, value=20.0, step=0.01)
-uploaded_file = st.file_uploader("Upload XLSX File (e.g., gecombineerd_resultaat-1322.xlsx)", type="xlsx")
 
-if uploaded_file and st.button("Generate Invoice"):
-    # Lees XLSX uit upload
-    df = pd.read_excel(uploaded_file, usecols="A:D", header=None, names=["Part Number", "Description", "Quantity", "Price"])
+if 'edited_df' in st.session_state and st.button("Generate Invoice"):
+    df = st.session_state['edited_df']
     df["Total"] = df["Quantity"] * df["Price"]
 
     # PDF buffer
@@ -31,7 +68,6 @@ if uploaded_file and st.button("Generate Invoice"):
     company_header = ParagraphStyle(name='CompanyHeader', parent=styles['Title'], fontSize=18, alignment=1, spaceAfter=8, textColor=colors.red, fontName='Helvetica-Bold', backColor=colors.HexColor("#f0f0f0"))
     bold_style = ParagraphStyle(name='Bold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10, leading=12, alignment=1)
     normal_style = ParagraphStyle(name='Normal', parent=styles['Normal'], fontSize=10, leading=12, alignment=1)
-    header_style = ParagraphStyle(name='Header', parent=styles['Title'], fontSize=16, spaceAfter=10, alignment=1, textColor=colors.red)
     footer_bold = ParagraphStyle(name='FooterBold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=12, alignment=1, spaceAfter=8)
     footer_style = ParagraphStyle(name='Footer', parent=styles['Normal'], fontSize=9, leading=11, alignment=1, textColor=colors.grey)
 
@@ -53,13 +89,11 @@ if uploaded_file and st.button("Generate Invoice"):
     elements.append(company_table)
     elements.append(Spacer(1, 20))
 
-    # Factuurgegevens
-    elements.append(Paragraph("INVOICE", header_style))
-    elements.append(HRFlowable(width="100%", thickness=1, color=colors.black, spaceAfter=10))
+    # Factuurgegevens (zonder INVOICE)
     bill_to_data = [
         ["Bill To:", "Invoice Number:", "Supplier Number:", "Invoice Date:"],
         ["CMS", factuurnummer, leveranciersnummer, datetime.today().strftime("%d-%m-%Y")],
-        ["Artemisweg 245, 8239 DD Lelystad, Netherlands", "", "", ""]
+        [Paragraph("Artemisweg 245, 8239 DD Lelystad, Netherlands", normal_style, colspan=4)]
     ]
     bill_table = Table(bill_to_data, colWidths=[4.5*cm, 4.5*cm, 4.5*cm, 4.5*cm])
     bill_table.setStyle(TableStyle([
@@ -68,6 +102,7 @@ if uploaded_file and st.button("Generate Invoice"):
         ("ALIGN", (0, 0), (-1, -1), "LEFT"),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("GRID", (0, 0), (-1, -1), 0, colors.transparent),
+        ("SPAN", (0, 2), (3, 2)),  # Span adres over alle kolommen
     ]))
     elements.append(bill_table)
     elements.append(Spacer(1, 24))
@@ -104,6 +139,7 @@ if uploaded_file and st.button("Generate Invoice"):
         ("FONTNAME", (-2, -5), (-1, -1), "Helvetica-Bold"),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
         ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ("LINEABOVE", (0, -5), (-1, -5), 0, colors.transparent),  # Verwijder lijn boven totalen indien nodig
     ]))
     elements.append(table)
     elements.append(Spacer(1, 36))
