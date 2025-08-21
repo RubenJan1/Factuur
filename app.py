@@ -23,7 +23,7 @@ if uploaded_files and st.button("Combine Files"):
         try:
             df = pd.read_excel(file, header=None, usecols=[0, 1, 2, 3])
             df = df.dropna(how='all')
-            if df.shape[1] != 4:  # Controleer of er 4 kolommen zijn
+            if df.shape[1] != 4:
                 st.error(f"File {file.name} does not have exactly 4 columns.")
                 continue
             all_dataframes.append(df)
@@ -34,6 +34,8 @@ if uploaded_files and st.button("Combine Files"):
         combined_df = pd.concat(all_dataframes, ignore_index=True)
         combined_df = combined_df.sort_values(by=0)  # Sort by Part Number
         combined_df.columns = ["Part Number", "Description", "Quantity", "Price"]
+        # Vervang lege beschrijvingen door "N/A"
+        combined_df["Description"] = combined_df["Description"].fillna("N/A")
         # Controleer op geldige numerieke waarden
         try:
             combined_df["Quantity"] = pd.to_numeric(combined_df["Quantity"], errors='coerce')
@@ -57,10 +59,11 @@ if 'combined_df' in st.session_state:
     df = st.session_state['combined_df']
     edited_df = st.data_editor(df, num_rows="dynamic")
     if st.button("Save Edited List"):
-        # Controleer of de bewerkte lijst nog geldig is
+        # Controleer op geldige bewerkte lijst
         if edited_df.empty:
             st.error("Edited list is empty. Please ensure there are valid items.")
         else:
+            edited_df["Description"] = edited_df["Description"].fillna("N/A")
             st.session_state['edited_df'] = edited_df
             st.success("List saved for invoice generation!")
 else:
@@ -74,12 +77,12 @@ shipping = st.number_input("Shipping & Handling (EUR)", min_value=0.0, value=20.
 
 if 'edited_df' in st.session_state and st.button("Generate Invoice"):
     df = st.session_state['edited_df']
-    # Controleer of de DataFrame geldige gegevens heeft
+    # Controleer op geldige gegevens
     if df.empty or df[["Part Number", "Description", "Quantity", "Price"]].isna().all().any():
         st.error("Invalid or empty data in the edited list. Please check and try again.")
     else:
         try:
-            df["Total"] = df["Quantity"] * df["Price"]  # Berekening gebeurt hier
+            df["Total"] = df["Quantity"] * df["Price"]
             if df["Total"].isna().any():
                 st.error("Some totals could not be calculated due to invalid Quantity or Price values.")
             else:
@@ -136,7 +139,13 @@ if 'edited_df' in st.session_state and st.button("Generate Invoice"):
                 # Producttabel
                 data = [["Part Number", "Description", "Quantity", "Price", "Total"]]
                 for _, row in df.iterrows():
-                    data.append([str(row["Part Number"]), str(row["Description"]), int(row["Quantity"]), f"€ {row['Price']:.2f}", f"€ {row['Total']:.2f}"])
+                    data.append([
+                        str(row["Part Number"]) if pd.notna(row["Part Number"]) else "N/A",
+                        str(row["Description"]) if pd.notna(row["Description"]) else "N/A",
+                        int(row["Quantity"]),
+                        f"€ {row['Price']:.2f}",
+                        f"€ {row['Total']:.2f}"
+                    ])
 
                 # Totalen
                 subtotal = df["Total"].sum()
