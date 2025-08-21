@@ -14,7 +14,7 @@ st.title("Factuur Generator - Classic Suzuki Parts NL")
 st.header("Step 1: Upload and Combine XLSX Files")
 leveranciersgroep = st.selectbox("Select Supplier Group", ["1322", "277"])
 
-uploaded_files = st.file_uploader("Upload XLSX Files for Combination", type="xlsx", accept_multiple_files=True)
+uploaded_files = st.file_uploader("Upload XLSX Files for Combination (e.g., 1322-2084856.xlsx)", type="xlsx", accept_multiple_files=True)
 
 combined_df = None
 if uploaded_files and st.button("Combine Files"):
@@ -29,18 +29,19 @@ if uploaded_files and st.button("Combine Files"):
     
     if all_dataframes:
         combined_df = pd.concat(all_dataframes, ignore_index=True)
-        # Sort by product number (column 0) from small to large
-        combined_df = combined_df.sort_values(by=0)
-        st.success("Files combined successfully!")
+        combined_df = combined_df.sort_values(by=0)  # Sort by Part Number
+        combined_df.columns = ["Part Number", "Description", "Quantity", "Price"]
         st.session_state['combined_df'] = combined_df
+        st.success("Files combined successfully!")
+        st.write("Combined List Preview:")
+        st.dataframe(combined_df)
     else:
         st.error("No files processed.")
 
-# Step 2: Edit Combined List (Remove unavailable items)
+# Step 2: Edit Combined List
 st.header("Step 2: Edit Combined List")
 if 'combined_df' in st.session_state:
     df = st.session_state['combined_df']
-    df.columns = ["Part Number", "Description", "Quantity", "Price"]
     edited_df = st.data_editor(df, num_rows="dynamic")
     if st.button("Save Edited List"):
         st.session_state['edited_df'] = edited_df
@@ -56,7 +57,7 @@ shipping = st.number_input("Shipping & Handling (EUR)", min_value=0.0, value=20.
 
 if 'edited_df' in st.session_state and st.button("Generate Invoice"):
     df = st.session_state['edited_df']
-    df["Total"] = df["Quantity"] * df["Price"]
+    df["Total"] = df["Quantity"] * df["Price"]  # Berekening gebeurt hier
 
     # PDF buffer
     buffer = BytesIO()
@@ -89,11 +90,11 @@ if 'edited_df' in st.session_state and st.button("Generate Invoice"):
     elements.append(company_table)
     elements.append(Spacer(1, 20))
 
-    # Factuurgegevens (zonder INVOICE)
+    # Factuurgegevens
     bill_to_data = [
         ["Bill To:", "Invoice Number:", "Supplier Number:", "Invoice Date:"],
         ["CMS", factuurnummer, leveranciersnummer, datetime.today().strftime("%d-%m-%Y")],
-        [Paragraph("Artemisweg 245, 8239 DD Lelystad, Netherlands", normal_style, colspan=4)]
+        [Paragraph("Artemisweg 245, 8239 DD Lelystad, Netherlands", normal_style)]
     ]
     bill_table = Table(bill_to_data, colWidths=[4.5*cm, 4.5*cm, 4.5*cm, 4.5*cm])
     bill_table.setStyle(TableStyle([
@@ -102,7 +103,7 @@ if 'edited_df' in st.session_state and st.button("Generate Invoice"):
         ("ALIGN", (0, 0), (-1, -1), "LEFT"),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("GRID", (0, 0), (-1, -1), 0, colors.transparent),
-        ("SPAN", (0, 2), (3, 2)),  # Span adres over alle kolommen
+        ("SPAN", (0, 2), (3, 2)),  # Adres over alle kolommen
     ]))
     elements.append(bill_table)
     elements.append(Spacer(1, 24))
@@ -118,11 +119,14 @@ if 'edited_df' in st.session_state and st.button("Generate Invoice"):
     total_ex_vat = subtotal + shipping
     vat = total_ex_vat * 0.21
     grand_total = total_ex_vat + vat
-    data.append(["", "", "", "Subtotal", f"€ {subtotal:.2f}"])
-    data.append(["", "", "", "Shipping & Handling", f"€ {shipping:.2f}"])
-    data.append(["", "", "", "Total Ex. VAT", f"€ {total_ex_vat:.2f}"])
-    data.append(["", "", "", "VAT 21%", f"€ {vat:.2f}"])
-    data.append(["", "", "", "Grand Total", f"€ {grand_total:.2f}"])
+    data.extend([
+        ["", "", "", "", ""],  # Lege rij voor scheiding
+        ["", "", "", "Subtotal", f"€ {subtotal:.2f}"],
+        ["", "", "", "Shipping & Handling", f"€ {shipping:.2f}"],
+        ["", "", "", "Total Ex. VAT", f"€ {total_ex_vat:.2f}"],
+        ["", "", "", "VAT 21%", f"€ {vat:.2f}"],
+        ["", "", "", "Grand Total", f"€ {grand_total:.2f}"]
+    ])
 
     table = Table(data, colWidths=[3.5*cm, 8*cm, 2*cm, 2.5*cm, 3*cm])
     table.setStyle(TableStyle([
@@ -133,13 +137,12 @@ if 'edited_df' in st.session_state and st.button("Generate Invoice"):
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
         ("ALIGN", (2, 1), (-1, -1), "CENTER"),
         ("ALIGN", (-2, 1), (-1, -1), "RIGHT"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("GRID", (0, 0), (-1, -5), 0.5, colors.grey),  # Grid alleen voor producten
         ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("BACKGROUND", (-2, -5), (-1, -1), colors.HexColor("#f0f0f0")),
-        ("FONTNAME", (-2, -5), (-1, -1), "Helvetica-Bold"),
+        ("BACKGROUND", (-2, -4), (-1, -1), colors.HexColor("#f0f0f0")),
+        ("FONTNAME", (-2, -4), (-1, -1), "Helvetica-Bold"),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
         ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("LINEABOVE", (0, -5), (-1, -5), 0, colors.transparent),  # Verwijder lijn boven totalen indien nodig
     ]))
     elements.append(table)
     elements.append(Spacer(1, 36))
@@ -154,6 +157,9 @@ if 'edited_df' in st.session_state and st.button("Generate Invoice"):
     elements.append(Paragraph("Thank you for doing business with us.", footer_style))
 
     # Bouw PDF en download
-    doc.build(elements)
-    buffer.seek(0)
-    st.download_button("Download Invoice PDF", buffer, file_name=f"invoice_{leveranciersnummer}.pdf", mime="application/pdf")
+    try:
+        doc.build(elements)
+        buffer.seek(0)
+        st.download_button("Download Invoice PDF", buffer, file_name=f"invoice_{leveranciersnummer}.pdf", mime="application/pdf")
+    except Exception as e:
+        st.error(f"Error generating PDF: {str(e)}")
