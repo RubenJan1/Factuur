@@ -191,7 +191,7 @@ if 'edited_df' in st.session_state and st.button("Generate Invoice"):
                 elements.append(Paragraph("Thank you for your order!", footer_bold))
                 elements.append(Paragraph("Payment is due within 14 days.", footer_style))
                 elements.append(Paragraph("Returns allowed within 15 days after receiving the item.", footer_style))
-                elements.append(Paragraph("Classic Suzuki Parts NL | IBAN: NL49 RABO 0372 0041 64", footer_style))
+                elements.append(Paragraph("Vlaandere Motoren | IBAN: NL49 RABO 0372 0041 64", footer_style))
                 elements.append(Paragraph("VATnumber 8077 51 911 B01 | C.O.C.number 01018576", footer_style))
                 elements.append(Paragraph("Thank you for doing business with us.", footer_bold))
 
