@@ -7,8 +7,6 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from datetime import datetime
 from io import BytesIO
-import os
-from pathlib import Path
 
 st.title("Factuur Generator - Classic Suzuki Parts NL")
 
@@ -220,28 +218,7 @@ if 'edited_df' in st.session_state and st.button("Generate Invoice"):
                     file_name=pdf_filename,
                     mime="application/pdf"
                 )
-                # 2. NIEUW: Opslaan op je computer via bestandskiezer
-                try:
-
-                    # Dit opent een "Opslaan als" dialoog (werkt alleen lokaal!)
-                    # Let op: alleen mogelijk als je Streamlit lokaal draait (niet op Streamlit Cloud)
-                    if st.button("Opslaan als PDF op je computer"):
-                        # Suggestie: begin in Downloads of Bureaublad
-                        default_path = str(Path.home() / "Downloads" / pdf_filename)
-                        save_path = st.file_dialog.save(
-                            title="Kies waar je de factuur wilt opslaan",
-                            default_filename=pdf_filename,
-                            initial_directory=str(Path.home() / "Downloads"),
-                            file_types=[("PDF files", "*.pdf")]
-                        )
-                        if save_path:
-                            with open(save_path, "wb") as f:
-                                f.write(pdf_bytes)
-                            st.success(f"Factuur opgeslagen!\n{save_path}")
-                        else:
-                            st.info("Opslaan geannuleerd.")
-                except Exception as e:
-                    st.warning("De 'Opslaan als'-knop werkt alleen als je de app lokaal draait (niet op Streamlit Cloud).")
+                
 
         except Exception as e:
             st.error(f"Error generating PDF: {str(e)}")
