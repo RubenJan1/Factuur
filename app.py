@@ -70,10 +70,24 @@ else:
 # Step 3: Generate Invoice
 st.header("Step 3: Generate Invoice")
 
-leveranciersnummer = st.text_input("Supplier Number", leveranciersgroep)
-factuurnummer = st.text_input("Invoice Number", "INV-000")
+leveranciersnummer = st.text_input("Supplier Number", value=leveranciersgroep, key="lev_nr")
+factuurnummer = st.text_input("Invoice Number", value="INV-000", key="fact_nr")
 shipping = st.number_input("Shipping & Handling (EUR)", min_value=0.0, value=20.0, step=0.01)
 
+# ← NIEUW: invoerveld voor bestandsnaam
+default_filename = f"Factuur_{leveranciersnummer}_{factuurnummer}.pdf"
+pdf_filename = st.text_input(
+    "Bestandsnaam voor de PDF (incl. .pdf)",
+    value=default_filename,
+    help="Je kunt de naam aanpassen. Plaats {leverancier} of {factuur} als je die automatisch wilt invullen."
+)
+
+# Vervang eventuele placeholders
+pdf_filename = pdf_filename.replace("{leverancier}", leveranciersnummer).replace("{factuur}", factuurnummer)
+
+# Forceer .pdf-extensie
+if not pdf_filename.lower().endswith(".pdf"):
+    pdf_filename += ".pdf"
 if 'edited_df' in st.session_state and st.button("Generate Invoice"):
     df = st.session_state['edited_df']
 
