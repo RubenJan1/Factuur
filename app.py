@@ -185,7 +185,7 @@ else:
             company_info_block = [
                 Paragraph("Vlaandere Motoren - de Marne 136 B", normal),
                 Paragraph("8701 MC - Bolsward", normal),
-                Paragraph("Tel: 00316-41484547", normal),
+                Paragraph("Tel: +316-41484547", normal),
                 Paragraph("IBAN: NL49 RABO 0372 0041 64", normal),
                 Paragraph("VAT: 8077 51 911 B01 | C.O.C: 01018576", normal),
             ]
