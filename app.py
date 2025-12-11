@@ -89,7 +89,28 @@ if uploaded_files:
         st.success("Files combined successfully!")
 
 st.write("Edit items below:")
-edited_df = st.data_editor(st.session_state["combined_df"], num_rows="dynamic", key="editor")
+
+# --- Sorting UI ---
+sort_column = st.selectbox(
+    "Sort by column",
+    ["Part Number", "Description", "Quantity", "Price"]
+)
+
+ascending = st.radio(
+    "Sort direction",
+    ["Ascending", "Descending"],
+    horizontal=True
+) == "Ascending"
+
+# Apply sorting
+sorted_df = st.session_state["combined_df"].sort_values(
+    sort_column,
+    ascending=ascending
+)
+
+# Editable table
+edited_df = st.data_editor(sorted_df, num_rows="dynamic", key="editor")
+
 
 if st.button("Save Item List"):
     if edited_df.empty:
