@@ -112,102 +112,199 @@ if 'edited_df' in st.session_state and st.button("Generate Invoice"):
                 elements = []
                 styles = getSampleStyleSheet()
 
-                # Stijlen
-                company_header = ParagraphStyle(
-                    name='CompanyHeader', parent=styles['Title'],
-                    fontSize=22, alignment=1, spaceAfter=14,
-                    textColor=colors.red, fontName='Helvetica-Bold'
-                )
-                footer_style = ParagraphStyle(
-                    name='Footer', parent=styles['Normal'], fontSize=9, leading=11, alignment=1, textColor=colors.grey
-                )
-                bold_style = ParagraphStyle(
-                    name='Bold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10, leading=12
-                )
-                normal_style = ParagraphStyle(
-                    name='Normal', parent=styles['Normal'], fontSize=10, leading=12
-                )
-                footer_bold = ParagraphStyle(
-                    name='FooterBold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=12, alignment=1
+                # ------------------------------
+                #   PROFESSIONELE FACTUUR UI
+                # ------------------------------
+
+                PRIMARY = colors.HexColor("#007B80")     # Petrol / blauwgroen
+                TEXT_DARK = colors.HexColor("#333333")   # Antraciet
+                ROW_LIGHT = colors.HexColor("#F7F7F7")   # Lichtgrijze rij
+
+                buffer = BytesIO()
+                doc = SimpleDocTemplate(
+                    buffer,
+                    pagesize=A4,
+                    rightMargin=1.5*cm,
+                    leftMargin=1.5*cm,
+                    topMargin=2.2*cm,
+                    bottomMargin=1.5*cm
                 )
 
-                # Titel + Bedrijfsgegevens
-                company_data = [
-                    [Paragraph("CLASSIC SUZUKI PARTS NL", company_header)],
-                    [Paragraph("Vlaandere Motoren - de Marne 136 B - 8701MC - Bolsward - Tel: 00316-41484547", footer_style)],
-                    [Paragraph("IBAN NL49 RABO 0372 0041 64 - SWIFT RABONL2U", footer_style)],
-                    [Paragraph("VATnumber 8077 51 911 B01 - C.O.C.number 01018576", footer_style)]
+                elements = []
+                styles = getSampleStyleSheet()
+
+                # ------------------------------
+                #   STIJLEN
+                # ------------------------------
+                title_style = ParagraphStyle(
+                    name="Title",
+                    fontSize=32,
+                    textColor=PRIMARY,
+                    fontName="Helvetica-Bold",
+                    leading=34,
+                )
+
+                section_header = ParagraphStyle(
+                    name="SectionHeader",
+                    fontSize=12,
+                    textColor=PRIMARY,
+                    fontName="Helvetica-Bold",
+                    spaceAfter=6
+                )
+
+                normal = ParagraphStyle(
+                    name="NormalText",
+                    fontSize=10,
+                    textColor=TEXT_DARK,
+                )
+
+                bold = ParagraphStyle(
+                    name="BoldText",
+                    parent=normal,
+                    fontName="Helvetica-Bold"
+                )
+
+                # ------------------------------
+                #   TITEL + HORIZONTALE LIJN
+                # ------------------------------
+                elements.append(Paragraph("FACTUUR", title_style))
+
+                elements.append(Table(
+                    [[]],
+                    colWidths=[doc.width],
+                    style=[
+                        ("LINEBELOW", (0,0), (-1,0), 3, PRIMARY)
+                    ]
+                ))
+                elements.append(Spacer(1, 18))
+
+                # ------------------------------
+                #   FACTUUR INFO BLOK (RECHTS)
+                # ------------------------------
+                invoice_info = [
+                    ["Factuurdatum:", datetime.today().strftime("%d-%m-%Y")],
+                    ["Factuurnummer:", factuurnummer],
+                    ["Leveranciersnummer:", leveranciersnummer],
+                    ["Vervaldatum:", datetime.today().strftime("%d-%m-%Y")],
                 ]
-                company_table = Table(company_data, colWidths=[doc.width], hAlign='CENTER')
-                company_table.setStyle(TableStyle([
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                    ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ]))
-                elements.append(company_table)
+
+                info_table = Table(
+                    invoice_info,
+                    colWidths=[5*cm, 5*cm],
+                    style=[
+                        ("FONTNAME", (0,0), (0,-1), "Helvetica-Bold"),
+                        ("ALIGN", (0,0), (-1,-1), "LEFT"),
+                        ("TEXTCOLOR", (0,0), (-1,-1), TEXT_DARK),
+                        ("BOTTOMPADDING", (0,0), (-1,-1), 4)
+                    ]
+                )
+                elements.append(info_table)
+                elements.append(Spacer(1, 15))
+
+                # ------------------------------
+                #   BILL TO BLOK (LINKS)
+                # ------------------------------
+                elements.append(Paragraph("Factuur aan", section_header))
+
+                bill_to = [
+                    ["CMS"],
+                    ["Artemisweg 245"],
+                    ["8239 DD Lelystad"],
+                    ["Netherlands"],
+                ]
+
+                bill_table = Table(
+                    bill_to,
+                    colWidths=[doc.width/2],
+                    style=[
+                        ("ALIGN", (0,0), (-1,-1), "LEFT"),
+                        ("TEXTCOLOR", (0,0), (-1,-1), TEXT_DARK),
+                        ("BOTTOMPADDING", (0,0), (-1,-1), 2)
+                    ]
+                )
+
+                elements.append(bill_table)
                 elements.append(Spacer(1, 20))
 
-                # Factuurgegevens
-                bill_to_data = [
-                    ["Bill To:", "Invoice Number:", "Supplier Number:", "Invoice Date:"],
-                    ["CMS", factuurnummer, leveranciersnummer, datetime.today().strftime("%d-%m-%Y")],
-                    [Paragraph("Artemisweg 245, 8239 DD Lelystad, Netherlands", normal_style), "", "", ""]
-                ]
-                bill_table = Table(bill_to_data, colWidths=[4.5*cm]*4)
-                bill_table.setStyle(TableStyle([
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-                    ("SPAN", (0, 2), (3, 2)),
-                ]))
-                elements.append(bill_table)
-                elements.append(Spacer(1, 24))
+                # ------------------------------
+                #   PRODUCTTABEL
+                # ------------------------------
+                elements.append(Paragraph("Productspecificaties", section_header))
 
-                # Producttabel
-                data = [["Part Number", "Description", "Quantity", "Price", "Total"]]
-                for _, row in df.iterrows():
-                    data.append([
-                        str(row["Part Number"]) if pd.notna(row["Part Number"]) else "N/A",
-                        str(row["Description"]) if pd.notna(row["Description"]) else "N/A",
+                table_data = [["Part Number", "Description", "Qty", "Price", "Total"]]
+
+                # tabelregels invullen
+                for i, row in df.iterrows():
+                    table_data.append([
+                        str(row["Part Number"]),
+                        str(row["Description"]),
                         int(row["Quantity"]),
                         f"€ {row['Price']:.2f}",
                         f"€ {row['Total']:.2f}"
                     ])
 
+                # Totaalberekeningen
                 subtotal = df["Total"].sum()
                 total_ex_vat = subtotal + shipping
                 vat = total_ex_vat * 0.21
                 grand_total = total_ex_vat + vat
 
-                data.extend([
-                    ["", "", "", "", ""],
-                    ["", "", "", "Subtotal", f"€ {subtotal:.2f}"],
-                    ["", "", "", "Shipping & Handling", f"€ {shipping:.2f}"],
-                    ["", "", "", "Total Ex. VAT", f"€ {total_ex_vat:.2f}"],
-                    ["", "", "", "VAT 21%", f"€ {vat:.2f}"],
-                    ["", "", "", "Grand Total", f"€ {grand_total:.2f}"]
-                ])
+                # tabel toevoegen
+                product_table = Table(
+                    table_data,
+                    colWidths=[3.5*cm, 8*cm, 2*cm, 3*cm, 3*cm],
+                    style=[
+                        ("BACKGROUND", (0,0), (-1,0), PRIMARY),
+                        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+                        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+                        ("GRID", (0,1), (-1,-1), 0.3, colors.grey),
+                        ("ALIGN", (2,1), (-1,-1), "RIGHT"),
+                        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, ROW_LIGHT]),
+                        ("TOPPADDING", (0,0), (-1,0), 6),
+                        ("BOTTOMPADDING", (0,0), (-1,0), 6),
+                    ]
+                )
+                elements.append(product_table)
+                elements.append(Spacer(1, 25))
 
-                table = Table(data, colWidths=[3.5*cm, 8*cm, 2*cm, 3*cm, 3*cm])
-                table.setStyle(TableStyle([
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4a4a4a")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("ALIGN", (2, 1), (-1, -1), "CENTER"),
-                    ("ALIGN", (-2, 1), (-1, -1), "RIGHT"),
-                    ("GRID", (0, 0), (-1, -6), 0.5, colors.grey),
-                    ("BOX", (0, 0), (-1, -1), 1, colors.black),
-                    ("FONTNAME", (-2, -5), (-1, -1), "Helvetica-Bold"),
-                ]))
-                elements.append(table)
-                elements.append(Spacer(1, 36))
+                # ------------------------------
+                #   TOTALEN BLOK (RECHTS)
+                # ------------------------------
+                totals = [
+                    ["Subtotal:", f"€ {subtotal:.2f}"],
+                    ["Shipping:", f"€ {shipping:.2f}"],
+                    ["Total Ex. VAT:", f"€ {total_ex_vat:.2f}"],
+                    ["VAT (21%):", f"€ {vat:.2f}"],
+                    ["Grand Total:", f"€ {grand_total:.2f}"],
+                ]
 
-                # Footer
-                elements.append(Paragraph("Thank you for your order!", footer_bold))
-                elements.append(Paragraph("Payment is due within 14 days.", footer_style))
-                elements.append(Paragraph("Returns allowed within 15 days after receiving the item.", footer_style))
-                elements.append(Paragraph("Vlaandere Motoren | IBAN: NL49 RABO 0372 0041 64", footer_style))
-                elements.append(Paragraph("VATnumber 8077 51 911 B01 | C.O.C.number 01018576", footer_style))
-                elements.append(Paragraph("Thank you for doing business with us.", footer_bold))
+                totals_table = Table(
+                    totals,
+                    colWidths=[6*cm, 4*cm],
+                    style=[
+                        ("FONTNAME", (0,0), (0,-1), "Helvetica-Bold"),
+                        ("ALIGN", (1,0), (-1,-1), "RIGHT"),
+                        ("TEXTCOLOR", (0,-1), (-1,-1), PRIMARY),
+                        ("FONTNAME", (0,-1), (-1,-1), "Helvetica-Bold"),
+                        ("BOTTOMPADDING", (0,0), (-1,-1), 4)
+                    ]
+                )
+                elements.append(Spacer(1, 10))
+                elements.append(totals_table)
+                elements.append(Spacer(1, 35))
+
+                # ------------------------------
+                #   FOOTER
+                # ------------------------------
+                footer_text = [
+                    "Thank you for your order.",
+                    "Payment term: 14 days.",
+                    "Classic Suzuki Parts NL – IBAN NL49 RABO 0372 0041 64",
+                    "VATnumber 8077 51 911 B01 | C.O.C.number 01018576"
+                ]
+
+            for line in footer_text:
+                elements.append(Paragraph(line, normal))
 
                 # Bouw PDF
                 doc.build(elements)
