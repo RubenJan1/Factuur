@@ -112,7 +112,7 @@ colA, colB = st.columns(2)
 with colA:
     invoice_number = st.text_input("Invoice Number", value=f"INV-{datetime.now().strftime('%Y%m%d%H%M')}")
     invoice_date = st.date_input("Invoice Date", value=datetime.today().date())
-    due_date = st.date_input("Due Date", value=invoice_date + timedelta(days=14))
+    supplier_number = st.text_input("Supplier Number", value="")
     shipping_cost = st.number_input("Shipping Cost (EUR)", value=20.00, step=0.50)
 
 with colB:
@@ -160,10 +160,29 @@ else:
 
             elems = []
 
-           # HEADER (Logo + Company Info)
+            # -----------------------
+            # HEADER (Centered Logo + Left Company Info)
+            # -----------------------
+
             logo = load_logo()
 
-            company_info = [
+            # Centered Logo
+            if logo:
+                logo_table = Table(
+                    [[logo]],
+                    colWidths=[doc.width]
+                )
+                logo_table.setStyle([
+                    ("ALIGN", (0,0), (-1,-1), "CENTER"),
+                    ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+                    ("BOTTOMPADDING", (0,0), (-1,-1), 12),
+                ])
+                elems.append(logo_table)
+            else:
+                elems.append(Paragraph("Company Logo Missing", bold))
+
+            # Company Info underneath (left aligned)
+            company_info_block = [
                 Paragraph("Vlaandere Motoren - de Marne 136 B", normal),
                 Paragraph("8701 MC - Bolsward", normal),
                 Paragraph("Tel: 00316-41484547", normal),
@@ -171,19 +190,20 @@ else:
                 Paragraph("VAT: 8077 51 911 B01 | C.O.C: 01018576", normal),
             ]
 
-            header_table = Table(
-                [[logo if logo else Paragraph("Company Logo Missing", bold), company_info]],
-                colWidths=[6.5*cm, doc.width - 6.5*cm]
-            )
-
-            header_table.setStyle([
+            company_table = Table([[company_info_block]], colWidths=[doc.width])
+            company_table.setStyle([
+                ("ALIGN", (0,0), (-1,-1), "LEFT"),
                 ("VALIGN", (0,0), (-1,-1), "TOP"),
                 ("LEFTPADDING", (0,0), (-1,-1), 0),
-                ("RIGHTPADDING", (0,0), (-1,-1), 0),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 12),
             ])
-            elems.append(header_table)
-            elems.append(Spacer(1, 10))
-            elems.append(Table([[" "]], colWidths=[doc.width], style=[("LINEBELOW", (0,0), (-1,0), 4, PRIMARY)]))
+
+            elems.append(company_table)
+
+            # Divider line below
+            elems.append(Table([[" "]], colWidths=[doc.width], style=[
+                ("LINEBELOW", (0,0), (-1,0), 4, PRIMARY)
+            ]))
             elems.append(Spacer(1, 15))
 
 
@@ -194,10 +214,11 @@ else:
 
             invoice_info = [
                 ["Invoice Number:", invoice_number],
+                ["Supplier Number:", supplier_number],
                 ["Invoice Date:", invoice_date.strftime("%d-%m-%Y")],
-                ["Due Date:", due_date.strftime("%d-%m-%Y")],
                 ["VAT:", f"{VAT_PERCENT}%"],
             ]
+
 
             inv_table = Table(invoice_info, colWidths=[4*cm, 6*cm])
             inv_table.setStyle([
@@ -207,13 +228,27 @@ else:
 
             bill_table = Table([[bill_lines]], colWidths=[doc.width - 8*cm])
 
-            info_table = Table(
-                [[bill_table, inv_table]],
-                colWidths=[doc.width - 8*cm, 8*cm]
+            # Combine billing info + invoice info side by side, top-aligned and same height
+            side_by_side = Table(
+                [
+                    [
+                        bill_table,   # Left block (Bill To)
+                        inv_table     # Right block (Invoice Info)
+                    ]
+                ],
+                colWidths=[doc.width * 0.55, doc.width * 0.45],
+                style=[
+                    ("VALIGN", (0,0), (-1,-1), "TOP"),       # << ensures equal height start
+                    ("ALIGN", (0,0), (-1,-1), "LEFT"),
+                    ("LEFTPADDING", (0,0), (-1,-1), 0),
+                    ("RIGHTPADDING", (0,0), (-1,-1), 0),
+                    ("TOPPADDING", (0,0), (-1,-1), 0),
+                    ("BOTTOMPADDING", (0,0), (-1,-1), 0),
+                ]
             )
 
-            elems.append(info_table)
-            elems.append(Spacer(1, 20))
+            elems.append(side_by_side)
+            elems.append(Spacer(1, 18))
 
             # PRODUCT TABLE
             table_data = [["Part Number", "Description", "Qty", "Price", "Total"]]
@@ -246,12 +281,12 @@ else:
 
             elems.append(product_table)
             elems.append(Spacer(1, 20))
-            
+
             # FOOTER
             elems.append(Spacer(1, 15))
             elems.append(Paragraph("Payment term: 14 days.", normal))
             elems.append(Paragraph("Returns allowed within 15 days after receiving the item.", normal))
-            elems.append(Paragraph("Classic Suzuki Parts NL — IBAN: NL49 RABO 0372 0041 64", normal))
+            elems.append(Paragraph("Vlaandere Motoren — IBAN: NL49 RABO 0372 0041 64", normal))
             elems.append(Paragraph("VATnumber 8077 51 911 B01 | C.O.C.number 01018576", normal))
 
 
