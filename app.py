@@ -41,7 +41,7 @@ def load_logo():
         bio = BytesIO()
         img.save(bio, format="PNG")
         bio.seek(0)
-        return RLImage(bio, width=12*cm, kind='proportional')
+        return RLImage(bio, width=12*cm, height=5.2*cm, kind='proportional')
     except:
         return None
 
