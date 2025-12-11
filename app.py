@@ -160,21 +160,24 @@ else:
 
             elems = []
 
-            # HEADER (Logo + Company Info)
+           # HEADER (Logo + Company Info)
             logo = load_logo()
-            if logo:
-                header_table = Table(
-                    [[logo, Paragraph("", normal)]],
-                    colWidths=[6.5*cm, doc.width - 6.5*cm]
-                )
-            else:
-                header_table = Table(
-                    [[Paragraph("Company Name Missing", title_style)]],
-                    colWidths=[doc.width]
-                )
+
+            company_info = [
+                Paragraph("Vlaandere Motoren - de Marne 136 B", normal),
+                Paragraph("8701 MC - Bolsward", normal),
+                Paragraph("Tel: 00316-41484547", normal),
+                Paragraph("IBAN: NL49 RABO 0372 0041 64", normal),
+                Paragraph("VAT: 8077 51 911 B01 | C.O.C: 01018576", normal),
+            ]
+
+            header_table = Table(
+                [[logo if logo else Paragraph("Company Logo Missing", bold), company_info]],
+                colWidths=[6.5*cm, doc.width - 6.5*cm]
+            )
 
             header_table.setStyle([
-                ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+                ("VALIGN", (0,0), (-1,-1), "TOP"),
                 ("LEFTPADDING", (0,0), (-1,-1), 0),
                 ("RIGHTPADDING", (0,0), (-1,-1), 0),
             ])
@@ -182,6 +185,7 @@ else:
             elems.append(Spacer(1, 10))
             elems.append(Table([[" "]], colWidths=[doc.width], style=[("LINEBELOW", (0,0), (-1,0), 4, PRIMARY)]))
             elems.append(Spacer(1, 15))
+
 
             # INVOICE & BILLING INFO
             bill_lines = [Paragraph(f"<b>{bill_to_name}</b>", bold)]
@@ -242,10 +246,14 @@ else:
 
             elems.append(product_table)
             elems.append(Spacer(1, 20))
-
+            
             # FOOTER
-            elems.append(Paragraph("Thank you for your business.", normal))
-            elems.append(Paragraph("Payment due within 14 days.", normal))
+            elems.append(Spacer(1, 15))
+            elems.append(Paragraph("Payment term: 14 days.", normal))
+            elems.append(Paragraph("Returns allowed within 15 days after receiving the item.", normal))
+            elems.append(Paragraph("Classic Suzuki Parts NL — IBAN: NL49 RABO 0372 0041 64", normal))
+            elems.append(Paragraph("VATnumber 8077 51 911 B01 | C.O.C.number 01018576", normal))
+
 
             doc.build(elems)
             buffer.seek(0)
